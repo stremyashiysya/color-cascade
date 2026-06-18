@@ -242,7 +242,7 @@
     return best;
   }
 
-  function popTile(t, hit) {
+  function popTile(t) {
     t.el.classList.add("pop");
     const el = t.el;
     setTimeout(() => el.remove(), 200);
@@ -265,7 +265,7 @@
     if (t.color === color) {
       score += 1;
       scoreEl.textContent = score;
-      popTile(t, true);
+      popTile(t);
       beep(520 + Math.min(score, 30) * 12, 0.12, "triangle");
       // difficulty ramp
       spawnInterval = Math.max(420, 1100 - score * 22);
