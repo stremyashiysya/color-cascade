@@ -326,6 +326,7 @@
   function gameOver() {
     running = false;
     cancelAnimationFrame(rafId);
+    const isNewBest = score > best && score > 0;
     if (score > best) {
       best = score;
       localStorage.setItem("colorCascadeBest", best);
@@ -333,7 +334,7 @@
     }
     ovTitle.textContent = "Game Over";
     ovText.innerHTML = "You scored <b style='color:#eef1ff'>" + score + "</b>." +
-      (score >= best && score > 0 ? " 🏆 New best!" : " Best: " + best + ".");
+      (isNewBest ? " 🏆 New best!" : " Best: " + best + ".");
     playBtn.textContent = "Play Again";
     overlay.classList.remove("hidden");
   }
