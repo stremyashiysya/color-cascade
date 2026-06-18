@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Color Cascade</title>
+<style>
+  :root {
+    --bg: #0f1226;
+    --panel: rgba(255, 255, 255, 0.06);
+    --text: #eef1ff;
+    --muted: #9aa0c7;
+    --red: #ff5d6c;
+    --blue: #4d8bff;
+    --green: #3ddc84;
+    --yellow: #ffd23f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: radial-gradient(1200px 800px at 50% -10%, #1c2150, var(--bg));
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    overflow: hidden;
+    user-select: none;
+  }
+  h1 {
+    margin: 0 0 2px;
+    font-size: 22px;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+
+  #game {
+    position: relative;
+    width: 360px;
+    max-width: 94vw;
+  }
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--muted);
+    padding: 0 4px 8px;
+  }
+  .hud b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  #playfield {
+    position: relative;
+    height: 440px;
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .goal-line {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  }
+  .tile {
+    position: absolute;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    transform: translate(-50%, 0);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 6px 14px rgba(0,0,0,0.35);
+    will-change: top;
+  }
+  .tile.red { background: var(--red); }
+  .tile.blue { background: var(--blue); }
+  .tile.green { background: var(--green); }
+  .tile.yellow { background: var(--yellow); }
+  .tile.pop { animation: pop 180ms ease-out forwards; }
+  @keyframes pop {
+    to { transform: translate(-50%, 0) scale(1.6); opacity: 0; }
+  }
+
+  #buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .btn {
+    height: 64px;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 60ms ease, filter 120ms ease;
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,0.3);
+  }
+  .btn:active { transform: translateY(3px); filter: brightness(1.15); }
+  .btn.red { background: var(--red); }
+  .btn.blue { background: var(--blue); }
+  .btn.green { background: var(--green); }
+  .btn.yellow { background: var(--yellow); }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 12, 30, 0.82);
+    backdrop-filter: blur(4px);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 8px;
+    padding: 20px;
+  }
+  #overlay.hidden { display: none; }
+  #overlay h2 { margin: 0; font-size: 26px; }
+  #overlay p { margin: 0; color: var(--muted); font-size: 14px; max-width: 280px; line-height: 1.5; }
+  .play-btn {
+    margin-top: 10px;
+    padding: 12px 28px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f1226;
+    background: linear-gradient(180deg, #ffffff, #d7ddff);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .play-btn:active { transform: translateY(2px); }
+  .flash { animation: flash 220ms ease; }
+  @keyframes flash {
+    0% { box-shadow: 0 0 0 0 rgba(255,93,108,0.0); }
+    50% { box-shadow: 0 0 0 6px rgba(255,93,108,0.5); }
+    100% { box-shadow: 0 0 0 0 rgba(255,93,108,0.0); }
+  }
+</style>
+</head>
+<body>
+  <h1>COLOR&nbsp;CASCADE</h1>
+  <div class="sub">Tap the button matching the lowest tile before it falls off.</div>
+
+  <div id="game">
+    <div class="hud">
+      <div>Score <b id="score">0</b></div>
+      <div>Best <b id="best">0</b></div>
+      <div>Lives <b id="lives">❤❤❤</b></div>
+    </div>
+
+    <div id="playfield">
+      <div class="goal-line"></div>
+      <div id="overlay">
+        <h2 id="ov-title">Ready?</h2>
+        <p id="ov-text">Colored tiles fall from the top. Hit the matching color button to pop the lowest one before it reaches the bottom. Miss or mistap and you lose a life. It gets faster!</p>
+        <button class="play-btn" id="playBtn">Play</button>
+      </div>
+    </div>
+
+    <div id="buttons">
+      <button class="btn red" data-color="red" aria-label="red"></button>
+      <button class="btn blue" data-color="blue" aria-label="blue"></button>
+      <button class="btn green" data-color="green" aria-label="green"></button>
+      <button class="btn yellow" data-color="yellow" aria-label="yellow"></button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  const COLORS = ["red", "blue", "green", "yellow"];
+  const FIELD_H = 440;
+  const TILE = 46;
+  const BOTTOM = FIELD_H - TILE; // y at which a tile is "lost"
+
+  const playfield = document.getElementById("playfield");
+  const overlay = document.getElementById("overlay");
+  const ovTitle = document.getElementById("ov-title");
+  const ovText = document.getElementById("ov-text");
+  const playBtn = document.getElementById("playBtn");
+  const scoreEl = document.getElementById("score");
+  const bestEl = document.getElementById("best");
+  const livesEl = document.getElementById("lives");
+
+  let tiles = [];      // {el, color, x, y}
+  let score = 0;
+  let lives = 3;
+  let running = false;
+  let lastTime = 0;
+  let spawnTimer = 0;
+  let spawnInterval = 1100; // ms, shrinks over time
+  let fallSpeed = 70;       // px per second, grows over time
+  let rafId = null;
+
+  let best = Number(localStorage.getItem("colorCascadeBest") || 0);
+  bestEl.textContent = best;
+
+  // --- audio (tiny WebAudio blips, no files) ---
+  let actx = null;
+  function beep(freq, dur, type) {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator();
+      const g = actx.createGain();
+      o.type = type || "sine";
+      o.frequency.value = freq;
+      o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.18, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.start();
+      o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function setLives(n) {
+    lives = n;
+    livesEl.textContent = "❤".repeat(Math.max(0, lives)) || "—";
+  }
+
+  function spawnTile() {
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    const el = document.createElement("div");
+    el.className = "tile " + color;
+    const margin = TILE / 2 + 6;
+    const x = margin + Math.random() * (playfield.clientWidth - margin * 2);
+    el.style.left = x + "px";
+    el.style.top = "-" + TILE + "px";
+    playfield.appendChild(el);
+    tiles.push({ el, color, x, y: -TILE });
+  }
+
+  // lowest = greatest y
+  function lowestTile() {
+    let best = null;
+    for (const t of tiles) {
+      if (!best || t.y > best.y) best = t;
+    }
+    return best;
+  }
+
+  function popTile(t, hit) {
+    t.el.classList.add("pop");
+    const el = t.el;
+    setTimeout(() => el.remove(), 200);
+    tiles = tiles.filter(x => x !== t);
+  }
+
+  function loseLife() {
+    setLives(lives - 1);
+    beep(110, 0.25, "sawtooth");
+    playfield.classList.remove("flash");
+    void playfield.offsetWidth; // reflow to restart animation
+    playfield.classList.add("flash");
+    if (lives <= 0) gameOver();
+  }
+
+  function handleTap(color) {
+    if (!running) return;
+    const t = lowestTile();
+    if (!t) return;
+    if (t.color === color) {
+      score += 1;
+      scoreEl.textContent = score;
+      popTile(t, true);
+      beep(520 + Math.min(score, 30) * 12, 0.12, "triangle");
+      // difficulty ramp
+      spawnInterval = Math.max(420, 1100 - score * 22);
+      fallSpeed = 70 + score * 4;
+    } else {
+      loseLife();
+    }
+  }
+
+  function loop(now) {
+    if (!running) return;
+    if (!lastTime) lastTime = now;
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    spawnTimer += dt * 1000;
+    if (spawnTimer >= spawnInterval) {
+      spawnTimer = 0;
+      spawnTile();
+    }
+
+    for (const t of tiles) {
+      t.y += fallSpeed * dt;
+      t.el.style.top = t.y + "px";
+    }
+
+    // tiles that fell past the bottom
+    const fell = tiles.filter(t => t.y >= BOTTOM);
+    if (fell.length) {
+      for (const t of fell) {
+        t.el.remove();
+      }
+      tiles = tiles.filter(t => t.y < BOTTOM);
+      loseLife();
+    }
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function startGame() {
+    // clear field
+    tiles.forEach(t => t.el.remove());
+    tiles = [];
+    score = 0;
+    scoreEl.textContent = 0;
+    setLives(3);
+    spawnInterval = 1100;
+    fallSpeed = 70;
+    spawnTimer = 0;
+    lastTime = 0;
+    running = true;
+    overlay.classList.add("hidden");
+    // unlock audio on user gesture
+    beep(660, 0.08, "triangle");
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function gameOver() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    if (score > best) {
+      best = score;
+      localStorage.setItem("colorCascadeBest", best);
+      bestEl.textContent = best;
+    }
+    ovTitle.textContent = "Game Over";
+    ovText.innerHTML = "You scored <b style='color:#eef1ff'>" + score + "</b>." +
+      (score >= best && score > 0 ? " 🏆 New best!" : " Best: " + best + ".");
+    playBtn.textContent = "Play Again";
+    overlay.classList.remove("hidden");
+  }
+
+  // --- input ---
+  document.querySelectorAll(".btn").forEach(b => {
+    b.addEventListener("click", () => handleTap(b.dataset.color));
+  });
+  // keyboard: arrow/letters for desktop fun
+  const keyMap = { r: "red", b: "blue", g: "green", y: "yellow",
+                   ArrowLeft: "red", ArrowUp: "blue", ArrowDown: "green", ArrowRight: "yellow" };
+  window.addEventListener("keydown", e => {
+    const c = keyMap[e.key];
+    if (c) { e.preventDefault(); handleTap(c); }
+    if ((e.key === " " || e.key === "Enter") && !running) startGame();
+  });
+  playBtn.addEventListener("click", startGame);
+})();
+</script>
+</body>
+</html>
